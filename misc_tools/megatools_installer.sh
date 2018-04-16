@@ -1,5 +1,5 @@
 # The dataset is hosted on mega.nz servers. Megatools would be required to download data from these servers to Unix boxes.
-# To gain access to the dataset, you'll have register with endoscopic-vision website and join the roboticinstrumentsegmentation group. You can register using your Gmail account, and join the group by clicking on 'Join' (the rightmost option on the bar below the logo)
+# To gain access to the dataset, you'll have to register with endoscopic-vision website and join the roboticinstrumentsegmentation group. You can register using your Gmail account, and join the group by clicking on 'Join' (the rightmost option on the bar below the logo)
 sudo apt-get update
 sudo apt-get install libtool libglib2.0-dev gobject-introspection libgmp3-dev nettle-dev asciidoc glib-networking libcurl4-gnutls-dev libssl-dev
 sudo dpkg --configure -a
