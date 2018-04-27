@@ -53,7 +53,7 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
         'step': step,
     }, str(model_path))
 
-    report_each = 10
+    #report_each = 10
     log = root.joinpath('train_{fold}.log'.format(fold=fold)).open('at', encoding='utf8')
     valid_losses = []
     callbacklist.on_train_begin()
@@ -80,10 +80,6 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
                 step += 1
                 tq.update(batch_size)
                 losses.append(loss.data[0])
-                mean_loss = np.mean(losses[-report_each:])
-                tq.set_postfix(loss='{:.5f}'.format(mean_loss))
-                if i and i % report_each == 0:
-                    write_event(log, step, loss=mean_loss)
 
                 batch_logs = {
                     'loss': np.array(loss.data[0]),
@@ -94,6 +90,9 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
                 callbacklist.on_batch_end(i, batch_logs)
 
                 if args.log_interval != 0 and total_minibatch_count % args.log_interval == 0:
+                    mean_loss = np.mean(losses[-args.log_interval:])
+                    tq.set_postfix(loss='{:.5f}'.format(mean_loss))
+                    write_event(log, step, loss=mean_loss)
                     # put all the logs in tensorboard
                     for name, value in six.iteritems(batch_logs):
                         tensorboard_writer.add_scalar(

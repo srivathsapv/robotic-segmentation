@@ -113,7 +113,7 @@ def main():
     arg('--name', type=str, default='', metavar='N',
                     help="""A name for this training run, this
                             affects the directory so use underscores and not spaces.""")
-    arg('--log_interval', type=int, default=10, metavar='I',
+    arg('--log_interval', type=int, default=20, metavar='I',
                     help="""how many batches to wait before logging detailed
                             training status, 0 means never log """)
 
