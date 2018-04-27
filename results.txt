@@ -1,0 +1,8 @@
+Unet-Parts: (1,2,3 folds trained for 20 iterations with lr 0.001 and 0.0001. fold 0 trained for 23 iterations with lr 0.001)
+TODO Check reason for relatively low metrics. Individually the fold accuracy seems to be better. Draw confusion matrix.
+Dice =  0.6512194891602369 0.1996822886522747
+Jaccard =  0.5346921343885322 0.195488021429121
+
+Unet-Binary:
+Dice =  0.8063471902105936 0.1748628344513377
+Jaccard =  0.7048456670550352 0.20431037908530544

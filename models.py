@@ -327,6 +327,7 @@ class UNetModule(nn.Module):
         self.l2 = Conv3BN(out, out)
 
     def forward(self, x):
+        import sys
         x = self.l1(x)
         x = self.l2(x)
         return x

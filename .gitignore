@@ -99,3 +99,9 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# Huge files and directories
+/data
+/images
+/model-backups
+/predictions

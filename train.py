@@ -14,6 +14,11 @@ from models import UNet11, LinkNet34, UNet, UNet16
 from loss import LossBinary, LossMulti
 from dataset import RoboticsDataset
 import utils
+from tensorboardX import SummaryWriter
+import callbacks
+import os
+import numpy as np
+import datetime
 
 from prepare_train_val import get_split
 
@@ -23,6 +28,71 @@ from transforms import (DualCompose,
                         HorizontalFlip,
                         VerticalFlip)
 
+def timeStamped(fname, fmt='%Y-%m-%d-%H-%M-%S_{fname}'):
+    """ Add a timestamp to your training run's name.
+    """
+    # http://stackoverflow.com/a/5215012/99379
+    return datetime.datetime.now().strftime(fmt).format(fname=fname)
+
+def prepareDatasetAndLogging(args):
+
+    training_run_name = timeStamped(args.dataset + '_' + args.name)
+
+    kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+
+    # Create the dataset, mnist or fasion_mnist
+    dataset_dir = os.path.join(args.data_dir, args.dataset)
+    training_run_dir = os.path.join(args.data_dir, training_run_name)
+    train_dataset = DatasetClass(
+        dataset_dir, train=True, download=True,
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,))
+        ]))
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
+    test_dataset = DatasetClass(
+        dataset_dir, train=False, transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,))
+        ]))
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset, batch_size=args.test_batch_size, shuffle=True, **kwargs)
+
+    # Set up visualization and progress status update code
+    callback_params = {'epochs': args.epochs,
+                       'samples': len(train_loader) * args.batch_size,
+                       'steps': len(train_loader),
+                       'metrics': {'acc': np.array([]),
+                                   'loss': np.array([]),
+                                   'val_acc': np.array([]),
+                                   'val_loss': np.array([])}}
+    if args.print_log:
+        output_on_train_end = os.sys.stdout
+    else:
+        output_on_train_end = None
+
+    callbacklist = callbacks.CallbackList(
+        [callbacks.BaseLogger(),
+         callbacks.TQDMCallback(),
+         callbacks.CSVLogger(filename=training_run_dir + training_run_name + '.csv',
+                             output_on_train_end=output_on_train_end)])
+    callbacklist.set_params(callback_params)
+
+    tensorboard_writer = SummaryWriter(
+        log_dir=training_run_dir,
+        comment=args.dataset +
+        '_embedding_training')
+
+    # show some image examples in tensorboard projector with inverted color
+    images = test_dataset.test_data[:100].float()
+    label = test_dataset.test_labels[:100]
+    features = images.view(100, 784)
+    tensorboard_writer.add_embedding(
+        features,
+        metadata=label,
+        label_img=images.unsqueeze(1))
+    return tensorboard_writer, callbacklist, train_loader, test_loader
 
 def main():
     parser = argparse.ArgumentParser()

@@ -7,6 +7,7 @@ from pathlib import Path
 from tqdm import tqdm
 import cv2
 import numpy as np
+from prop import fx, fy
 
 data_path = Path('data')
 
@@ -18,9 +19,23 @@ original_height, original_width = 1080, 1920
 height, width = 1024, 1280
 h_start, w_start = 28, 320
 
+height, width, h_start, w_start, original_height, original_width = int(height*fy), int(width*fx), int(h_start*fy), int(w_start*fx), int(original_height*fy), int(original_width*fx)
+
 binary_factor = 255
-parts_factor = 85
+parts_factor = 85  # 255/3
 instrument_factor = 32
+
+
+def read_im(file_name, is_mask=False):
+    from prop import fx, fy
+    if is_mask:
+        img = cv2.imread(str(file_name), 0)
+        # For masks, INTER_NEAREST is used instead of INTER_AREA (the typical choisce for shrinking) because the mask value is an indicator of part of instrument
+        img = cv2.resize(img, dsize=(0, 0), fx=fx, fy=fy, interpolation=cv2.INTER_NEAREST)
+    else:
+        img = cv2.imread(str(file_name))
+        img = cv2.resize(img, dsize=(0, 0), fx=fx, fy=fy, interpolation=cv2.INTER_AREA)
+    return img
 
 
 if __name__ == '__main__':
@@ -42,7 +57,7 @@ if __name__ == '__main__':
         # mask_folders = [x for x in mask_folders if 'Other' not in str(mask_folders)]
 
         for file_name in tqdm(list((train_path / instrument_folder / 'left_frames').glob('*'))):
-            img = cv2.imread(str(file_name))
+            img = read_im(file_name)
             old_h, old_w, _ = img.shape
 
             img = img[h_start: h_start + height, w_start: w_start + width]
@@ -54,7 +69,9 @@ if __name__ == '__main__':
             mask_instruments = np.zeros((old_h, old_w))
 
             for mask_folder in mask_folders:
-                mask = cv2.imread(str(mask_folder / file_name.name), 0)
+                if "DS_Store" in str(mask_folder): continue
+                mask = read_im(mask_folder / file_name.name, is_mask=True)
+                #mask = np.uint8(np.round(mask / 10)) * 10
 
                 if 'Bipolar_Forceps' in str(mask_folder):
                     mask_instruments[mask > 0] = 1
@@ -77,6 +94,8 @@ if __name__ == '__main__':
                     mask_parts[mask == 10] = 1  # Shaft
                     mask_parts[mask == 20] = 2  # Wrist
                     mask_parts[mask == 30] = 3  # Claspers
+                    #cv2.imshow("mask",mask)
+                    #cv2.waitKey(0)
 
             mask_binary = (mask_binary[h_start: h_start + height, w_start: w_start + width] > 0).astype(
                 np.uint8) * binary_factor
@@ -84,6 +103,10 @@ if __name__ == '__main__':
                 np.uint8) * parts_factor
             mask_instruments = (mask_instruments[h_start: h_start + height, w_start: w_start + width]).astype(
                 np.uint8) * instrument_factor
+
+            cv2.imshow("mask_binary",mask_binary); cv2.waitKey(0)
+            cv2.imshow("mask_parts", mask_parts); cv2.waitKey(0)
+            cv2.imshow("mask_instruments", mask_instruments); cv2.waitKey(0)
 
             cv2.imwrite(str(binary_mask_folder / file_name.name), mask_binary)
             cv2.imwrite(str(parts_mask_folder / file_name.name), mask_parts)

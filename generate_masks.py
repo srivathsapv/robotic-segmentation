@@ -52,7 +52,7 @@ def get_model(model_path, model_type='unet11', problem_type='binary'):
     elif model_type == 'UNet':
         model = UNet(num_classes=num_classes)
 
-    state = torch.load(str(model_path))
+    state = torch.load(str(model_path)) if torch.cuda.is_available() else torch.load(str(model_path), map_location='cpu')
     state = {key.replace('module.', ''): value for key, value in state['model'].items()}
     model.load_state_dict(state)
 
@@ -79,6 +79,7 @@ def predict(model, from_file_names, batch_size: int, to_path, problem_type):
         outputs = model(inputs)
 
         for i, image_name in enumerate(paths):
+            # VR: Note: Output contains one channel per class
             if problem_type == 'binary':
                 factor = prepare_data.binary_factor
                 t_mask = (F.sigmoid(outputs[i, 0]).data.cpu().numpy() * factor).astype(np.uint8)
@@ -104,6 +105,7 @@ def predict(model, from_file_names, batch_size: int, to_path, problem_type):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     arg = parser.add_argument
+    # TODO Synchronize default parameters across train/generate_masks/evaluate
     arg('--model_path', type=str, default='data/models/unet11_binary_20', help='path to model folder')
     arg('--model_type', type=str, default='UNet11', help='network architecture',
         choices=['UNet', 'UNet11', 'UNet16', 'LinkNet34'])
@@ -112,6 +114,7 @@ if __name__ == '__main__':
     arg('--fold', type=int, default=0, choices=[0, 1, 2, 3, -1], help='-1: all folds')
     arg('--problem_type', type=str, default='parts', choices=['binary', 'parts', 'instruments'])
     arg('--workers', type=int, default=8)
+    # TODO Revisit output paths. Consider having configurations which can be shared with train/generate_masks/evaluate
 
     args = parser.parse_args()
 

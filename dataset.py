@@ -36,6 +36,7 @@ class RoboticsDataset(Dataset):
 
 
 def to_float_tensor(img):
+    # Change 'channels' from the final dimension to the first one.
     return torch.from_numpy(np.moveaxis(img, -1, 0)).float()
 
 

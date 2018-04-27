@@ -42,6 +42,7 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
         model.load_state_dict(state['model'])
         print('Restored model, epoch {}, step {:,}'.format(epoch, step))
     else:
+        print('Building model from scratch')
         epoch = 1
         step = 0
 
