@@ -109,3 +109,4 @@ data/
 images/
 model-backups/
 predictions/
+*.pth
