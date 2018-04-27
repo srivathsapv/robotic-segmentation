@@ -110,3 +110,4 @@ images/
 model-backups/
 predictions/
 *.pth
+/runs

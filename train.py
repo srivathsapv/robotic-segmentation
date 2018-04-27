@@ -34,65 +34,68 @@ def timeStamped(fname, fmt='%Y-%m-%d-%H-%M-%S_{fname}'):
     # http://stackoverflow.com/a/5215012/99379
     return datetime.datetime.now().strftime(fmt).format(fname=fname)
 
-def prepareDatasetAndLogging(args):
+def prepareDatasetAndLogging(args, train_dir):
 
-    training_run_name = timeStamped(args.dataset + '_' + args.name)
-
-    kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+    # kwargs = {'num_workers': 1, 'pin_memory': True} if torch.cuda.is_available() else {}
 
     # Create the dataset, mnist or fasion_mnist
-    dataset_dir = os.path.join(args.data_dir, args.dataset)
-    training_run_dir = os.path.join(args.data_dir, training_run_name)
-    train_dataset = DatasetClass(
-        dataset_dir, train=True, download=True,
-        transform=transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,))
-        ]))
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
-    test_dataset = DatasetClass(
-        dataset_dir, train=False, transform=transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,))
-        ]))
-    test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=args.test_batch_size, shuffle=True, **kwargs)
+    def make_loader(file_names, shuffle=False, transform=None, problem_type='binary'):
+        return DataLoader(
+            dataset=RoboticsDataset(file_names, transform=transform, problem_type=problem_type),
+            shuffle=shuffle,
+            num_workers=args.workers,
+            batch_size=args.batch_size,
+            pin_memory=torch.cuda.is_available()
+        )
+
+    train_file_names, val_file_names = get_split(args.fold)
+
+    print('num train = {}, num_val = {}'.format(len(train_file_names), len(val_file_names)))
+
+    train_transform = DualCompose([
+        HorizontalFlip(),
+        VerticalFlip(),
+        ImageOnly(Normalize())
+    ])
+
+    val_transform = DualCompose([
+        ImageOnly(Normalize())
+    ])
+
+    train_loader = make_loader(train_file_names, shuffle=True, transform=train_transform, problem_type=args.type)
+    valid_loader = make_loader(val_file_names, transform=val_transform, problem_type=args.type)
 
     # Set up visualization and progress status update code
-    callback_params = {'epochs': args.epochs,
+    callback_params = {'epochs': args.n_epochs,
                        'samples': len(train_loader) * args.batch_size,
                        'steps': len(train_loader),
                        'metrics': {'acc': np.array([]),
                                    'loss': np.array([]),
                                    'val_acc': np.array([]),
                                    'val_loss': np.array([])}}
-    if args.print_log:
-        output_on_train_end = os.sys.stdout
-    else:
-        output_on_train_end = None
+
+
+    tensorboard_log_dir = os.path.join(str(train_dir), "tensorboard_logs")
 
     callbacklist = callbacks.CallbackList(
         [callbacks.BaseLogger(),
          callbacks.TQDMCallback(),
-         callbacks.CSVLogger(filename=training_run_dir + training_run_name + '.csv',
-                             output_on_train_end=output_on_train_end)])
+         callbacks.CSVLogger(filename=str(tensorboard_log_dir) + '/callback_logs.csv')])
     callbacklist.set_params(callback_params)
-
     tensorboard_writer = SummaryWriter(
-        log_dir=training_run_dir,
-        comment=args.dataset +
-        '_embedding_training')
+        log_dir=tensorboard_log_dir)
 
     # show some image examples in tensorboard projector with inverted color
-    images = test_dataset.test_data[:100].float()
-    label = test_dataset.test_labels[:100]
+    # TODO Add sample images to tensorboard
+    """images = valid_loader.dataset.test_data[:100].float()
+    label = valid_loader.dataset.test_labels[:100]
     features = images.view(100, 784)
     tensorboard_writer.add_embedding(
         features,
         metadata=label,
         label_img=images.unsqueeze(1))
-    return tensorboard_writer, callbacklist, train_loader, test_loader
+        """
+    return tensorboard_writer, callbacklist, train_loader, valid_loader
 
 def main():
     parser = argparse.ArgumentParser()
@@ -100,18 +103,28 @@ def main():
     arg('--jaccard-weight', default=1, type=float)
     arg('--device-ids', type=str, default='0', help='For example 0,1 to run on two GPUs')
     arg('--fold', type=int, help='fold', default=0)
-    arg('--root', default='runs/debug', help='checkpoint root')
+    arg('--root', default='runs', help='checkpoint root')
     arg('--batch-size', type=int, default=1)
     arg('--n-epochs', type=int, default=100)
     arg('--lr', type=float, default=0.0001)
     arg('--workers', type=int, default=8)
     arg('--type', type=str, default='binary', choices=['binary', 'parts', 'instruments'])
     arg('--model', type=str, default='UNet', choices=['UNet', 'UNet11', 'LinkNet34'])
+    arg('--name', type=str, default='', metavar='N',
+                    help="""A name for this training run, this
+                            affects the directory so use underscores and not spaces.""")
+    arg('--log_interval', type=int, default=10, metavar='I',
+                    help="""how many batches to wait before logging detailed
+                            training status, 0 means never log """)
 
     args = parser.parse_args()
 
-    root = Path(args.root)
-    root.mkdir(exist_ok=True, parents=True)
+    train_type = args.type + '_' + args.model
+    training_run_name = timeStamped(args.name)
+    training_run_dir = os.path.join(args.root, train_type, training_run_name)
+
+    train_dir = Path(training_run_dir)
+    train_dir.mkdir(exist_ok=True, parents=True)
 
     if args.type == 'parts':
         num_classes = 4
@@ -145,39 +158,15 @@ def main():
 
     cudnn.benchmark = True
 
-    def make_loader(file_names, shuffle=False, transform=None, problem_type='binary'):
-        return DataLoader(
-            dataset=RoboticsDataset(file_names, transform=transform, problem_type=problem_type),
-            shuffle=shuffle,
-            num_workers=args.workers,
-            batch_size=args.batch_size,
-            pin_memory=torch.cuda.is_available()
-        )
-
-    train_file_names, val_file_names = get_split(args.fold)
-
-    print('num train = {}, num_val = {}'.format(len(train_file_names), len(val_file_names)))
-
-    train_transform = DualCompose([
-        HorizontalFlip(),
-        VerticalFlip(),
-        ImageOnly(Normalize())
-    ])
-
-    val_transform = DualCompose([
-        ImageOnly(Normalize())
-    ])
-
-    train_loader = make_loader(train_file_names, shuffle=True, transform=train_transform, problem_type=args.type)
-    valid_loader = make_loader(val_file_names, transform=val_transform, problem_type=args.type)
-
-    root.joinpath('params.json').write_text(
+    train_dir.joinpath('params.json').write_text(
         json.dumps(vars(args), indent=True, sort_keys=True))
 
     if args.type == 'binary':
         valid = validation_binary
     else:
         valid = validation_multi
+
+    tensorboard_writer, callbacklist, train_loader, valid_loader = prepareDatasetAndLogging(args, train_dir)
 
     utils.train(
         init_optimizer=lambda lr: Adam(model.parameters(), lr=lr),
@@ -188,8 +177,13 @@ def main():
         valid_loader=valid_loader,
         validation=valid,
         fold=args.fold,
-        num_classes=num_classes
+        num_classes=num_classes,
+        callbacklist = callbacklist,
+        tensorboard_writer = tensorboard_writer
     )
+
+    callbacklist.on_train_end()
+    tensorboard_writer.close()
 
 
 if __name__ == '__main__':

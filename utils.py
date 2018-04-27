@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 import tqdm
-
+import six
 
 def variable(x, volatile=False):
     if isinstance(x, (list, tuple)):
@@ -28,7 +28,8 @@ def write_event(log, step: int, **data):
     log.flush()
 
 
-def train(args, model, criterion, train_loader, valid_loader, validation, init_optimizer, n_epochs=None, fold=None, num_classes=None):
+def train(args, model, criterion, train_loader, valid_loader, validation, init_optimizer
+          , n_epochs=None, fold=None, num_classes=None, callbacklist = None, tensorboard_writer = None):
     lr = args.lr
     n_epochs = n_epochs or args.n_epochs
     optimizer = init_optimizer(lr)
@@ -55,7 +56,10 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
     report_each = 10
     log = root.joinpath('train_{fold}.log'.format(fold=fold)).open('at', encoding='utf8')
     valid_losses = []
+    callbacklist.on_train_begin()
+    total_minibatch_count = 0
     for epoch in range(epoch, n_epochs + 1):
+        callbacklist.on_epoch_begin(epoch)
         model.train()
         random.seed()
         tq = tqdm.tqdm(total=(len(train_loader) * args.batch_size))
@@ -65,6 +69,7 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
         try:
             mean_loss = 0
             for i, (inputs, targets) in enumerate(tl):
+                callbacklist.on_batch_begin(i)
                 inputs, targets = variable(inputs), variable(targets)
                 outputs = model(inputs)
                 loss = criterion(outputs, targets)
@@ -79,6 +84,32 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
                 tq.set_postfix(loss='{:.5f}'.format(mean_loss))
                 if i and i % report_each == 0:
                     write_event(log, step, loss=mean_loss)
+
+                batch_logs = {
+                    'loss': np.array(loss.data[0]),
+                    'size': np.array(targets.shape[0])
+                }
+
+                batch_logs['batch'] = np.array(i)
+                callbacklist.on_batch_end(i, batch_logs)
+
+                if args.log_interval != 0 and total_minibatch_count % args.log_interval == 0:
+                    # put all the logs in tensorboard
+                    for name, value in six.iteritems(batch_logs):
+                        tensorboard_writer.add_scalar(
+                            name, value, global_step=total_minibatch_count)
+
+                    # put all the parameters in tensorboard histograms
+                    for name, param in model.named_parameters():
+                        name = name.replace('.', '/')
+                        tensorboard_writer.add_histogram(
+                            name, param.data.cpu().numpy(), global_step=total_minibatch_count)
+                        tensorboard_writer.add_histogram(
+                            name + '/gradient',
+                            param.grad.data.cpu().numpy(),
+                            global_step=total_minibatch_count)
+                total_minibatch_count += 1
+
             write_event(log, step, loss=mean_loss)
             tq.close()
             save(epoch + 1)
@@ -86,6 +117,11 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
             write_event(log, step, **valid_metrics)
             valid_loss = valid_metrics['valid_loss']
             valid_losses.append(valid_loss)
+
+            for name, value in six.iteritems(valid_metrics):
+                tensorboard_writer.add_scalar(
+                    name, value, global_step=total_minibatch_count)
+            callbacklist.on_epoch_end(epoch, valid_metrics)
         except KeyboardInterrupt:
             tq.close()
             print('Ctrl+C, saving snapshot')
