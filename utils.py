@@ -10,6 +10,32 @@ from torch.autograd import Variable
 import tqdm
 import six
 
+import os
+
+import re
+import itertools
+from textwrap import wrap
+import prepare_data
+
+import io
+import matplotlib.pyplot as plt
+import PIL.Image
+from torchvision.transforms import ToTensor
+
+def timeStamped(fname='', fmt='%Y-%m-%d-%H-%M-%S_{fname}'):
+    """ Add a timestamp to your training run's name.
+    """
+    # http://stackoverflow.com/a/5215012/99379
+    return datetime.now().strftime(fmt).format(fname=fname)
+
+
+def get_run_dir_from_args(primary_train_result_dir, usecase, model, run_tag):
+    train_type = usecase + '_' + model
+    training_run_name = timeStamped(run_tag)
+    training_run_dir = os.path.join(primary_train_result_dir, train_type, training_run_name)
+    return training_run_dir
+
+
 def variable(x, volatile=False):
     if isinstance(x, (list, tuple)):
         return [variable(y, volatile=volatile) for y in x]
@@ -28,8 +54,49 @@ def write_event(log, step: int, **data):
     log.flush()
 
 
+def get_confusion_matrix_img(numpy_cm, labels, font_size=20): # numpy-cm
+    if len(labels) != numpy_cm.shape[0]:
+        raise Exception("Length of labels %i does not match dimension of confusion matrix' height %i" % (len(labels), numpy_cm.shape[0]))
+    # TODO Define figsize as a function of the longest string in labels
+    fig = plt.figure(figsize=(12, 12), dpi=60, facecolor='w', edgecolor='k')
+    ax = fig.add_subplot(1, 1, 1)
+    im = ax.imshow(numpy_cm, cmap='Oranges')
+
+    classes = [re.sub(r'([a-z](?=[A-Z])|[A-Z](?=[A-Z][a-z]))', r'\1 ', x) for x in labels]
+    classes = ['\n'.join(wrap(l, 40)) for l in classes]
+
+    tick_marks = np.arange(len(classes))
+
+    ax.set_xlabel('Predicted', fontsize=font_size)
+    ax.set_xticks(tick_marks)
+    c = ax.set_xticklabels(classes, fontsize=font_size, rotation=-90, ha='center')
+    ax.xaxis.set_label_position('bottom')
+    ax.xaxis.tick_bottom()
+
+    ax.set_ylabel('True Label', fontsize=font_size)
+    ax.set_yticks(tick_marks)
+    ax.set_yticklabels(classes, fontsize=font_size, va='center')
+    ax.yaxis.set_label_position('left')
+    ax.yaxis.tick_left()
+
+    for i, j in itertools.product(range(numpy_cm.shape[0]), range(numpy_cm.shape[1])):
+        ax.text(j, i, format(numpy_cm[i, j], 'n') if numpy_cm[i, j] != 0 else '.', horizontalalignment="center"
+                , fontsize=font_size, verticalalignment='center', color="black")
+
+    # return fig
+    #fig.show()
+
+    # Convert to tensor
+    buf = io.BytesIO()
+    plt.savefig(buf, format='jpeg')
+    buf.seek(0)
+    image = PIL.Image.open(buf)
+    image = ToTensor()(image).unsqueeze(0)
+    return image
+
+
 def train(args, model, criterion, train_loader, valid_loader, validation, init_optimizer
-          , n_epochs=None, fold=None, num_classes=None, callbacklist = None, tensorboard_writer = None):
+          , n_epochs=None, fold=None, num_classes=None, callbacklist=None, tensorboard_writer=None):
     lr = args.lr
     n_epochs = n_epochs or args.n_epochs
     optimizer = init_optimizer(lr)
@@ -40,25 +107,28 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
         state = torch.load(str(model_path))
         epoch = state['epoch']
         step = state['step']
+        total_minibatch_count = state['total_minibatch_count']
         model.load_state_dict(state['model'])
         print('Restored model, epoch {}, step {:,}'.format(epoch, step))
     else:
         print('Building model from scratch')
         epoch = 1
         step = 0
+        total_minibatch_count = 0
 
     save = lambda ep: torch.save({
         'model': model.state_dict(),
         'epoch': ep,
         'step': step,
+        'total_minibatch_count': total_minibatch_count
     }, str(model_path))
 
     #report_each = 10
     log = root.joinpath('train_{fold}.log'.format(fold=fold)).open('at', encoding='utf8')
     valid_losses = []
     callbacklist.on_train_begin()
-    total_minibatch_count = 0
     for epoch in range(epoch, n_epochs + 1):
+        #if epoch > 5: break
         callbacklist.on_epoch_begin(epoch)
         model.train()
         random.seed()
@@ -69,6 +139,7 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
         try:
             mean_loss = 0
             for i, (inputs, targets) in enumerate(tl):
+                #if i > 2: break
                 callbacklist.on_batch_begin(i)
                 inputs, targets = variable(inputs), variable(targets)
                 outputs = model(inputs)
@@ -99,20 +170,20 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
                             name, value, global_step=total_minibatch_count)
 
                     # put all the parameters in tensorboard histograms
-                    for name, param in model.named_parameters():
+                    """"for name, param in model.named_parameters():
                         name = name.replace('.', '/')
                         tensorboard_writer.add_histogram(
                             name, param.data.cpu().numpy(), global_step=total_minibatch_count)
                         tensorboard_writer.add_histogram(
                             name + '/gradient',
                             param.grad.data.cpu().numpy(),
-                            global_step=total_minibatch_count)
+                            global_step=total_minibatch_count)"""
                 total_minibatch_count += 1
 
             write_event(log, step, loss=mean_loss)
             tq.close()
             save(epoch + 1)
-            valid_metrics = validation(model, criterion, valid_loader, num_classes)
+            valid_metrics, confusion_matrix = validation(model, criterion, valid_loader, num_classes)
             write_event(log, step, **valid_metrics)
             valid_loss = valid_metrics['valid_loss']
             valid_losses.append(valid_loss)
@@ -120,6 +191,12 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
             for name, value in six.iteritems(valid_metrics):
                 tensorboard_writer.add_scalar(
                     name, value, global_step=total_minibatch_count)
+            if args.type == 'parts':
+                _, _, labels = prepare_data.get_factor_mask_labels(args.type)
+
+                cm_img = get_confusion_matrix_img(confusion_matrix, labels)  # Exclude background from labels
+                tensorboard_writer.add_image("Confusion Matrix", cm_img, epoch)
+
             callbacklist.on_epoch_end(epoch, valid_metrics)
         except KeyboardInterrupt:
             tq.close()

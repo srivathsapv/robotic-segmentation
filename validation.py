@@ -8,8 +8,10 @@ def validation_binary(model: nn.Module, criterion, valid_loader, num_classes=Non
     losses = []
 
     jaccard = []
-
+    #i = 0
     for inputs, targets in valid_loader:
+        #i += 1
+        #if i > 5: break
         inputs = utils.variable(inputs, volatile=True)
         targets = utils.variable(targets)
         outputs = model(inputs)
@@ -23,7 +25,7 @@ def validation_binary(model: nn.Module, criterion, valid_loader, num_classes=Non
 
     print('Valid loss: {:.5f}, jaccard: {:.5f}'.format(valid_loss, valid_jaccard))
     metrics = {'valid_loss': valid_loss, 'jaccard_loss': valid_jaccard}
-    return metrics
+    return metrics, None # TODO Confusion matrix
 
 
 def get_jaccard(y_true, y_pred):
@@ -39,7 +41,10 @@ def validation_multi(model: nn.Module, criterion, valid_loader, num_classes):
     losses = []
     confusion_matrix = np.zeros(
         (num_classes, num_classes), dtype=np.uint32)
+    #i = 0
     for inputs, targets in valid_loader:
+        #i += 1
+        #if i > 10: break
         inputs = utils.variable(inputs, volatile=True)
         targets = utils.variable(targets)
         outputs = model(inputs)
@@ -50,13 +55,13 @@ def validation_multi(model: nn.Module, criterion, valid_loader, num_classes):
         confusion_matrix += calculate_confusion_matrix_from_arrays(
             output_classes, target_classes, num_classes)
 
-    confusion_matrix = confusion_matrix[1:, 1:]  # exclude background
+    confusion_matrix2 = confusion_matrix[1:, 1:]  # exclude background
     valid_loss = np.mean(losses)  # type: float
     ious = {'iou_{}'.format(cls + 1): iou
-            for cls, iou in enumerate(calculate_iou(confusion_matrix))}
+            for cls, iou in enumerate(calculate_iou(confusion_matrix2))}
 
     dices = {'dice_{}'.format(cls + 1): dice
-             for cls, dice in enumerate(calculate_dice(confusion_matrix))}
+             for cls, dice in enumerate(calculate_dice(confusion_matrix2))}
 
     average_iou = np.mean(list(ious.values()))
     average_dices = np.mean(list(dices.values()))
@@ -66,7 +71,7 @@ def validation_multi(model: nn.Module, criterion, valid_loader, num_classes):
     metrics = {'valid_loss': valid_loss, 'iou': average_iou}
     metrics.update(ious)
     metrics.update(dices)
-    return metrics
+    return metrics, confusion_matrix  # Send complete confusion matrix including background
 
 
 def calculate_confusion_matrix_from_arrays(prediction, ground_truth, nr_labels):

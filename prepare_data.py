@@ -111,3 +111,18 @@ if __name__ == '__main__':
             cv2.imwrite(str(binary_mask_folder / file_name.name), mask_binary)
             cv2.imwrite(str(parts_mask_folder / file_name.name), mask_parts)
             cv2.imwrite(str(instrument_mask_folder / file_name.name), mask_instruments)
+
+def get_factor_mask_labels(problem_type):
+    if problem_type == 'binary':
+        mask_folder = 'binary_masks'
+        factor = binary_factor
+        labels = ['background', 'foreground']
+    elif problem_type == 'parts':
+        mask_folder = 'parts_masks'
+        factor = parts_factor
+        labels = ['background','Shaft','Wrist','Claspers']
+    elif problem_type == 'instruments':
+        factor = instrument_factor
+        mask_folder = 'instruments_masks'
+        labels = [] # TODO implement this
+    return factor, mask_folder, labels

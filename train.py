@@ -28,11 +28,6 @@ from transforms import (DualCompose,
                         HorizontalFlip,
                         VerticalFlip)
 
-def timeStamped(fname, fmt='%Y-%m-%d-%H-%M-%S_{fname}'):
-    """ Add a timestamp to your training run's name.
-    """
-    # http://stackoverflow.com/a/5215012/99379
-    return datetime.datetime.now().strftime(fmt).format(fname=fname)
 
 def prepareDatasetAndLogging(args, train_dir):
 
@@ -74,7 +69,6 @@ def prepareDatasetAndLogging(args, train_dir):
                                    'val_acc': np.array([]),
                                    'val_loss': np.array([])}}
 
-
     tensorboard_log_dir = os.path.join(str(train_dir), "tensorboard_logs")
 
     callbacklist = callbacks.CallbackList(
@@ -103,27 +97,34 @@ def main():
     arg('--jaccard-weight', default=1, type=float)
     arg('--device-ids', type=str, default='0', help='For example 0,1 to run on two GPUs')
     arg('--fold', type=int, help='fold', default=0)
-    arg('--root', default='runs', help='checkpoint root')
+    arg('--train-result-dir', default='runs', help='checkpoint root')
     arg('--batch-size', type=int, default=1)
     arg('--n-epochs', type=int, default=100)
     arg('--lr', type=float, default=0.0001)
     arg('--workers', type=int, default=8)
     arg('--type', type=str, default='binary', choices=['binary', 'parts', 'instruments'])
     arg('--model', type=str, default='UNet', choices=['UNet', 'UNet11', 'LinkNet34'])
-    arg('--name', type=str, default='', metavar='N',
-                    help="""A name for this training run, this
+    arg('--run-tag', type=str, default='', metavar='N',
+                    help="""A tag for this training run, this
                             affects the directory so use underscores and not spaces.""")
-    arg('--log_interval', type=int, default=20, metavar='I',
+    arg('--log_interval', type=int, default=100, metavar='I',
                     help="""how many batches to wait before logging detailed
                             training status, 0 means never log """)
+    arg('--reuse-train-dir', type=str, default=None,
+                    help="""If it is set, training would resume using results in the directory.""")
+    # TODO Add additional argument to reuse previous execution's parameters as default parameters. The previous execution's parameters can be obtained from params.json
+    # TODO Optionally split reuse-train-dir into two arguments - train-dir and reuse (boolean)
+    # TODO Currently after a training model is resumed, training would occur for {n_epochs - (last completed epoch no)}. Change this so that the new training job occurs for n_epochs unless a flag resume_from_prev_epoch is set
 
     args = parser.parse_args()
 
-    train_type = args.type + '_' + args.model
-    training_run_name = timeStamped(args.name)
-    training_run_dir = os.path.join(args.root, train_type, training_run_name)
+    # TODO If reuse_train_dir is set, add checks to ensure that the previous execution exists
+    # TODO If reuse_train_dir is set, add checks to ensure that the previous execution's model and type match that of the current run (if explicitly provided)
+    args.root = args.reuse_train_dir or \
+                utils.get_run_dir_from_args(args.train_result_dir, args.type, args.model, args.run_tag)
+    args.root = os.path.abspath(args.root)
 
-    train_dir = Path(training_run_dir)
+    train_dir = Path(args.root)
     train_dir.mkdir(exist_ok=True, parents=True)
 
     if args.type == 'parts':
@@ -158,7 +159,9 @@ def main():
 
     cudnn.benchmark = True
 
-    train_dir.joinpath('params.json').write_text(
+    # TODO Modify this to include starting epoch. This would require moving epoch determination code from utils.train before this point.
+    execution_time = utils.timeStamped()
+    train_dir.joinpath('params_%s.json'%execution_time).write_text(
         json.dumps(vars(args), indent=True, sort_keys=True))
 
     if args.type == 'binary':
@@ -178,8 +181,8 @@ def main():
         validation=valid,
         fold=args.fold,
         num_classes=num_classes,
-        callbacklist = callbacklist,
-        tensorboard_writer = tensorboard_writer
+        callbacklist=callbacklist,
+        tensorboard_writer=tensorboard_writer
     )
 
     callbacklist.on_train_end()

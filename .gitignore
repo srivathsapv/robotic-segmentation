@@ -106,7 +106,6 @@ ENV/
 /model-backups
 /predictions
 data/
-images/
 model-backups/
 predictions/
 *.pth
