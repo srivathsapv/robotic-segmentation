@@ -110,3 +110,4 @@ predictions/
 *.pth
 /runs
 /runs_backup
+.DS_Store
