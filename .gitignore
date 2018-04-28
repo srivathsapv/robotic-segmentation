@@ -102,7 +102,6 @@ ENV/
 
 # Huge files and directories
 /data
-/images
 /model-backups
 /predictions
 data/
@@ -110,3 +109,4 @@ model-backups/
 predictions/
 *.pth
 /runs
+/runs_backup
