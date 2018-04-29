@@ -62,6 +62,7 @@ def get_confusion_matrix_img(numpy_cm, labels, font_size=20): # numpy-cm
     if len(labels) != numpy_cm.shape[0]:
         raise Exception("Length of labels %i does not match dimension of confusion matrix' height %i" % (len(labels), numpy_cm.shape[0]))
     # TODO Define figsize as a function of the longest string in labels
+    total_sum = numpy_cm.sum()
     fig = plt.figure(figsize=(12, 12), dpi=60, facecolor='w', edgecolor='k')
     ax = fig.add_subplot(1, 1, 1)
     im = ax.imshow(numpy_cm, cmap='Oranges')
@@ -84,7 +85,7 @@ def get_confusion_matrix_img(numpy_cm, labels, font_size=20): # numpy-cm
     ax.yaxis.tick_left()
 
     for i, j in itertools.product(range(numpy_cm.shape[0]), range(numpy_cm.shape[1])):
-        ax.text(j, i, format(numpy_cm[i, j], 'n') if numpy_cm[i, j] != 0 else '.', horizontalalignment="center"
+        ax.text(j, i, "%.2f %%\n( %i )"%(numpy_cm[i, j]*100/total_sum, numpy_cm[i, j]) if numpy_cm[i, j] != 0 else '.', horizontalalignment="center"
                 , fontsize=font_size, verticalalignment='center', color="black")
 
     # return fig
