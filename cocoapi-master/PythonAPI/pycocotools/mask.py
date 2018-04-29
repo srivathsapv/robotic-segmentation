@@ -1,6 +1,7 @@
 __author__ = 'tsungyi'
 
-from pytorch_mask_rcnn.pycocotools import _mask
+from . import _mask
+#from pytorch_mask_rcnn_old.pycocotools import _mask
 
 # Interface for manipulating masks stored in RLE format.
 #

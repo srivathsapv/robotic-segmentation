@@ -43,7 +43,6 @@ __version__ = '2.0'
 # Data, paper, and tutorials available at:  http://mscoco.org/
 # Code written by Piotr Dollar and Tsung-Yi Lin, 2014.
 # Licensed under the Simplified BSD License [see bsd.txt]
-exit(1)
 import json
 import time
 import matplotlib.pyplot as plt

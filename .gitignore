@@ -104,11 +104,10 @@ ENV/
 /data
 /model-backups
 /predictions
-data/
-model-backups/
-predictions/
 *.pth
 /runs
 /runs_backup
 .DS_Store
 /images
+/pytorch_mask_rcnn_old
+/cocoapi-master
