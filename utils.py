@@ -46,7 +46,7 @@ def cuda(x):
     return x.cuda(async=True) if torch.cuda.is_available() else x
 
 
-def write_event(log, step: int, **data):
+def write_event(log, step, **data):
     data['step'] = step
     data['dt'] = datetime.now().isoformat()
     log.write(json.dumps(data, sort_keys=True))
@@ -146,6 +146,7 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
                 loss = criterion(outputs, targets)
                 optimizer.zero_grad()
                 batch_size = inputs.size(0)
+                # TODO If the loss is significant, store a few output images that could be viewed from tensorflow
                 loss.backward()
                 optimizer.step()
                 step += 1
@@ -187,6 +188,7 @@ def train(args, model, criterion, train_loader, valid_loader, validation, init_o
             write_event(log, step, **valid_metrics)
             valid_loss = valid_metrics['valid_loss']
             valid_losses.append(valid_loss)
+            # TODO Add early stopping
 
             for name, value in six.iteritems(valid_metrics):
                 tensorboard_writer.add_scalar(

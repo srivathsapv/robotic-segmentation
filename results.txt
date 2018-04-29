@@ -3,6 +3,17 @@ TODO Check reason for relatively low metrics. Individually the fold accuracy see
 Dice =  0.6512194891602369 0.1996822886522747
 Jaccard =  0.5346921343885322 0.195488021429121
 
-Unet-Binary:
+Unet-Binary (mean and std. dev):
 Dice =  0.8063471902105936 0.1748628344513377
 Jaccard =  0.7048456670550352 0.20431037908530544
+
+Unet binary graphs trends:
+Loss (train loss) has spikes: likely because loss shoots up near edges between foreground objects near each other
+In fold 0, there are lot of spikes between 4.9k and 10.5k. this is probably because of errors near edges. The network likely made drastic changes to avert such errors. This, however, may have caused temporary rise in loss .
+There were no spikes in training after 18k steps. This is perhaps because it learnt well to avoid edge errors. The validation loss started decreasing after this point.
+Note: Jaccard loss is a misnomer. Consider changing it to mean Jaccard.
+In fold 2, there was a sudden increase at step 4.05k. This could
+
+In most binary folds, train loss is smaller than the test loss by a considerable factor. Is this because of overfitting or because the model does not learn to differentiate between the edges of validation images as fast as it learns for the training dataset? It may not be overfitting because the loss and mean Jaccard score improve over time.
+In the case of evaluation, would a median loss be more appropriate?
+Investigate: Fold 3 has the highest validation loss but the best Jaccard!

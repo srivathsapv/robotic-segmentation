@@ -20,7 +20,7 @@ def validation_binary(model: nn.Module, criterion, valid_loader, num_classes=Non
         jaccard += [get_jaccard(targets, (outputs > 0).float()).data[0]]
 
     valid_loss = np.mean(losses)  # type: float
-
+    # TODO If the loss is significant, store a few images that could be viewed from tensorflow
     valid_jaccard = np.mean(jaccard)
 
     print('Valid loss: {:.5f}, jaccard: {:.5f}'.format(valid_loss, valid_jaccard))
@@ -48,6 +48,7 @@ def validation_multi(model: nn.Module, criterion, valid_loader, num_classes):
         inputs = utils.variable(inputs, volatile=True)
         targets = utils.variable(targets)
         outputs = model(inputs)
+        # TODO If the loss is significant, store a few output images that could be viewed from tensorflow
         loss = criterion(outputs, targets)
         losses.append(loss.data[0])
         output_classes = outputs.data.cpu().numpy().argmax(axis=1)
