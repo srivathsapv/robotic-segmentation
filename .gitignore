@@ -110,3 +110,4 @@ ENV/
 .DS_Store
 /images
 /pytorch_mask_rcnn_old
+temp_results/
