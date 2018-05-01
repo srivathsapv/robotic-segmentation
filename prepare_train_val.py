@@ -7,7 +7,7 @@ def get_split(fold, train_path = None):
              2: [4, 8],
              3: [6, 7]}
     if not train_path:
-        train_path = data_path +"/"+ 'cropped_train'
+        train_path = data_path / 'cropped_train'
 
     train_file_names = []
     val_file_names = []

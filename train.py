@@ -43,7 +43,7 @@ def prepareDatasetAndLogging(args, train_dir):
             pin_memory=torch.cuda.is_available()
         )
 
-    train_file_names, val_file_names = get_split(args.fold, train_path=args.train_files_dir)
+    train_file_names, val_file_names = get_split(args.fold, train_path=Path(args.train_files_dir))
 
     print('num train = {}, num_val = {}'.format(len(train_file_names), len(val_file_names)))
 
