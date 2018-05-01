@@ -68,9 +68,9 @@ DEFAULT_DATASET_YEAR = "2014"
 
 class CocoConfig(Config):
     """Configuration for training on MS COCO.
-    Derives from the base Config class and overrides values specific
-    to the COCO dataset.
-    """
+            Derives from the base Config class and overrides values specific
+            to the COCO dataset.
+            """
     # Give the configuration a recognizable name
     NAME = "coco"
 
@@ -81,8 +81,12 @@ class CocoConfig(Config):
     # Uncomment to train on 8 GPUs (default is 1)
     # GPU_COUNT = 8
 
-    # Number of classes (including background)
-    NUM_CLASSES = 2 # 1 + 80  # COCO has 80 classes
+    # self.NUM_CLASSES = 1 + num_classes
+    def __init__(self, num_classes):
+        super(CocoConfig, self).__init__()
+        #self.NUM_CLASSES = 1 + 80  # COCO has 80 classes
+        self.NUM_CLASSES = 1 + num_classes  # COCO has 80 classes
+
 
 
 ############################################################
@@ -439,13 +443,15 @@ if __name__ == '__main__':
     print("Auto Download: ", args.download)
 
     # Configurations
+
+    if args.type == 'binary':
+        num_classes = 1
+    elif args.type == 'parts':
+        num_classes = 4
+    else:
+        raise Exception("Invalid type arg")
+
     if args.command == "train":
-        if args.type == 'binary':
-            num_classes = 2
-        elif args.type == 'parts':
-            num_classes = 4
-        else:
-            raise Exception("Invalid type arg")
         config = CocoConfig(num_classes)
         config.GPU_COUNT = 1 if torch.cuda.is_available() else 0
     else:
@@ -455,7 +461,11 @@ if __name__ == '__main__':
             GPU_COUNT = 1 if torch.cuda.is_available() else 0
             IMAGES_PER_GPU = 1
             DETECTION_MIN_CONFIDENCE = 0
-        config = InferenceConfig()
+
+            def __init__(self, num_classes):
+                super(InferenceConfig, self).__init__(num_classes)
+
+        config = InferenceConfig(num_classes)
     config.display()
 
     # Create model

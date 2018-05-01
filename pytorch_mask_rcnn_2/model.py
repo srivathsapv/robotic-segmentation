@@ -1553,6 +1553,16 @@ class MaskRCNN(nn.Module):
         checkpoint = os.path.join(dir_name, checkpoints[-1])
         return dir_name, checkpoint
 
+    # https://github.com/multimodallearning/pytorch-mask-rcnn/pull/12
+    def state_modifier(self, state_dict):
+        state_dict.pop("mask.conv5.bias")
+        state_dict.pop("mask.conv5.weight")
+        state_dict.pop("classifier.linear_class.bias")
+        state_dict.pop("classifier.linear_class.weight")
+        state_dict.pop("classifier.linear_bbox.bias")
+        state_dict.pop("classifier.linear_bbox.weight")
+        return state_dict
+
     def load_weights(self, filepath):
         """Modified version of the correspoding Keras function with
         the addition of multi-GPU support and the ability to exclude
@@ -1564,6 +1574,10 @@ class MaskRCNN(nn.Module):
                 state_dict = torch.load(filepath)
             else:
                 state_dict = torch.load(filepath, map_location='cpu')
+
+            if (self.config.NUM_CLASSES != state_dict['mask.conv5.bias'].shape):
+                state_dict = self.state_modifier(state_dict)
+
             self.load_state_dict(state_dict, strict=False)
         else:
             print("Weight file not found ...")
