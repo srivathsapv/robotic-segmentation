@@ -1,13 +1,13 @@
 from dataset import data_path
 
 
-def get_split(fold):
+def get_split(fold, train_path = None):
     folds = {0: [1, 3],
              1: [2, 5],
              2: [4, 8],
              3: [6, 7]}
-
-    train_path = data_path / 'cropped_train'
+    if not train_path:
+        train_path = data_path / 'cropped_train'
 
     train_file_names = []
     val_file_names = []

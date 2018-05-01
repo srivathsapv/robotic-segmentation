@@ -13,6 +13,8 @@ data_path = Path('../data')
 
 train_path = data_path / 'train'
 
+annotation_path = data_path / 'annotations'
+
 mask_train_path = data_path / 'mask_rcnn_train'
 
 original_height, original_width = 1080, 1920
@@ -69,7 +71,7 @@ def get_annotation_from_mask(ground_truth_binary_mask, image_id, category_id, id
 
 if __name__ == '__main__':
     generate_cropped_images = False
-    debug_images = True
+    debug_images = False
 
     # Value of dict contains name and pixel-value
     part_dict = {1:('Shaft', 10), 2:('Wrist', 20), 3:('Claspers', 30)}
@@ -107,7 +109,7 @@ if __name__ == '__main__':
             old_h, old_w, _ = img.shape
 
             # Not included license, coco_url, date_captured, flickr_url
-            img_annotation = {'file_name': os.path.basename(file_name), 'id': image_id, 'height': height, 'width': width}
+            img_annotation = {'file_name': os.path.basename(file_name).replace("png","jpg"), 'id': image_id, 'height': height, 'width': width}
             images.append(img_annotation)
 
             # Crop required region
@@ -174,8 +176,16 @@ if __name__ == '__main__':
             image_id += 1
 
         bin_consolidated_annotations = {'images': images, 'categories': bin_categories, 'annotations': binary_annotations}
-        parts_consolidated_annotations = {'images': images, 'categories': parts_annotations, 'annotations': binary_annotations}
-        print(1)
+        bin_ann_path = annotation_path / 'binary'
+        bin_ann_path.mkdir(exist_ok=True, parents=True)
+        (bin_ann_path / ("%s.json"%instrument_folder)).write_text(json.dumps(bin_consolidated_annotations))
+
+        parts_consolidated_annotations = {'images': images, 'categories': parts_categories, 'annotations': parts_annotations}
+        parts_ann_path = annotation_path / 'parts'
+        parts_ann_path.mkdir(exist_ok=True, parents=True)
+        (parts_ann_path / ("%s.json"%instrument_folder)).write_text(json.dumps(parts_consolidated_annotations))
+
+        print("Generated annotations for instrument dataset %i"%instrument_index)
 
 
 def get_factor_mask_labels(problem_type):

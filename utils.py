@@ -18,11 +18,13 @@ from textwrap import wrap
 import prepare_data
 
 import io
-import matplotlib
-from sys import platform
-if platform == "linux" or platform == "linux2":
-    matplotlib.use('Agg')
+#import matplotlib
+# from sys import platform
+# if platform == "linux" or platform == "linux2":
+#     matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+if "DISPLAY" not in os.environ:
+    plt.switch_backend('agg')
 import PIL.Image
 from torchvision.transforms import ToTensor
 

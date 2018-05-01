@@ -107,11 +107,11 @@ if __name__ == '__main__':
             cv2.imshow("mask_binary",mask_binary); cv2.waitKey(0)
             cv2.imshow("mask_parts", mask_parts); cv2.waitKey(0)
             cv2.imshow("mask_instruments", mask_instruments); cv2.waitKey(0)
-
+"""
             cv2.imwrite(str(binary_mask_folder / file_name.name), mask_binary)
             cv2.imwrite(str(parts_mask_folder / file_name.name), mask_parts)
             cv2.imwrite(str(instrument_mask_folder / file_name.name), mask_instruments)
-
+"""
 def get_factor_mask_labels(problem_type):
     if problem_type == 'binary':
         mask_folder = 'binary_masks'

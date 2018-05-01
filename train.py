@@ -43,7 +43,7 @@ def prepareDatasetAndLogging(args, train_dir):
             pin_memory=torch.cuda.is_available()
         )
 
-    train_file_names, val_file_names = get_split(args.fold)
+    train_file_names, val_file_names = get_split(args.fold, train_path=args.train_files_dir)
 
     print('num train = {}, num_val = {}'.format(len(train_file_names), len(val_file_names)))
 
@@ -112,6 +112,9 @@ def main():
                             training status, 0 means never log """)
     arg('--reuse-train-dir', type=str, default=None,
                     help="""If it is set, training would resume using results in the directory.""")
+
+    arg('--train-files-dir', type=str, default="data/cropped_train",
+                    help="""Location of directory containing instrument directories. .""")
     # TODO Add additional argument to reuse previous execution's parameters as default parameters. The previous execution's parameters can be obtained from params.json
     # TODO Optionally split reuse-train-dir into two arguments - train-dir and reuse (boolean)
     # TODO Currently after a training model is resumed, training would occur for {n_epochs - (last completed epoch no)}. Change this so that the new training job occurs for n_epochs unless a flag resume_from_prev_epoch is set
