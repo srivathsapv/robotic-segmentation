@@ -412,6 +412,11 @@ def plot_loss(loss, val_loss, save=True, log_dir=None):
     loss = np.array(loss)
     val_loss = np.array(val_loss)
 
+    save_path = os.path.join(log_dir, "loss.npy")
+    np.save(save_path, loss)
+    save_path = os.path.join(log_dir, "val_loss.npy")
+    np.save(save_path, val_loss)
+
     plt.figure("loss")
     plt.gcf().clear()
     plt.plot(loss[:, 0], label='train')
