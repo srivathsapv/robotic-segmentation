@@ -1104,7 +1104,7 @@ def compute_mrcnn_mask_loss(target_masks, target_class_ids, pred_masks):
     if target_class_ids.size():
         # Only positive ROIs contribute to the loss. And only
         # the class specific mask of each ROI.
-        positive_ix = torch.nonzero(target_class_ids > 0)[:, 0]
+        positive_ix = torch.nonzero(target_class_ids > 0)[:, 0]  # returns batch no. of each positive roi
         positive_class_ids = target_class_ids[positive_ix.data].long()
         indices = torch.stack((positive_ix, positive_class_ids), dim=1)
 
@@ -1560,7 +1560,10 @@ class MaskRCNN(nn.Module):
         exlude: list of layer names to excluce
         """
         if os.path.exists(filepath):
-            state_dict = torch.load(filepath)
+            if self.config.GPU_COUNT:
+                state_dict = torch.load(filepath)
+            else:
+                state_dict = torch.load(filepath, map_location='cpu')
             self.load_state_dict(state_dict, strict=False)
         else:
             print("Weight file not found ...")

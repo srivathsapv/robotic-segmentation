@@ -76,13 +76,13 @@ class CocoConfig(Config):
 
     # We use one GPU with 8GB memory, which can fit one image.
     # Adjust down if you use a smaller GPU.
-    IMAGES_PER_GPU = 16
+    IMAGES_PER_GPU = 8
 
     # Uncomment to train on 8 GPUs (default is 1)
     # GPU_COUNT = 8
 
     # Number of classes (including background)
-    NUM_CLASSES = 1 + 80  # COCO has 80 classes
+    NUM_CLASSES = 2 # 1 + 80  # COCO has 80 classes
 
 
 ############################################################
@@ -133,10 +133,6 @@ class CocoDataset(utils.Dataset):
 
         # Add images
         for i in image_ids:
-            try:
-                print(coco.imgs[i]['file_name'])
-            except:
-                raise Exception("Exception")
 
             path = os.path.join(image_dir, coco.imgs[i]['file_name'])
             #if not os.path.exists(path): continue
@@ -432,6 +428,8 @@ if __name__ == '__main__':
                         metavar="<True|False>",
                         help='Automatically download and unzip MS-COCO files (default=False)',
                         type=bool)
+    parser.add_argument('--type', default=True,
+                        help='binary or parts')
     args = parser.parse_args()
     print("Command: ", args.command)
     print("Model: ", args.model)
@@ -442,7 +440,13 @@ if __name__ == '__main__':
 
     # Configurations
     if args.command == "train":
-        config = CocoConfig()
+        if args.type == 'binary':
+            num_classes = 2
+        elif args.type == 'parts':
+            num_classes = 4
+        else:
+            raise Exception("Invalid type arg")
+        config = CocoConfig(num_classes)
         config.GPU_COUNT = 1 if torch.cuda.is_available() else 0
     else:
         class InferenceConfig(CocoConfig):
@@ -524,7 +528,7 @@ if __name__ == '__main__':
     elif args.command == "evaluate":
         # Validation dataset
         dataset_val = CocoDataset()
-        coco = dataset_val.load_coco(args.dataset, "minival", year=args.year, return_coco=True, auto_download=args.download)
+        coco = dataset_val.load_coco(args.dataset, "val", year=args.year, return_coco=True, auto_download=args.download)
         dataset_val.prepare()
         print("Running COCO evaluation on {} images.".format(args.limit))
         evaluate_coco(model, dataset_val, coco, "bbox", limit=int(args.limit))
