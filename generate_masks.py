@@ -115,12 +115,14 @@ if __name__ == '__main__':
     arg('--problem_type', type=str, default='parts', choices=['binary', 'parts', 'instruments'])
     arg('--workers', type=int, default=8)
     # TODO Revisit output paths. Consider having configurations which can be shared with train/generate_masks/evaluate
+    arg('--train-files-dir', type=str, default="data/cropped_train",
+                    help="""Location of directory containing instrument directories. .""")
 
     args = parser.parse_args()
 
     if args.fold == -1:
         for fold in [0, 1, 2, 3]:
-            _, file_names = get_split(fold)
+            _, file_names = get_split(fold, train_path=Path(args.train_files_dir))
             model = get_model(str((Path(args.model_path)/ ('fold_%i'%fold)).joinpath('model_{fold}.pt'.format(fold=fold))),
                               model_type=args.model_type, problem_type=args.problem_type)
 
@@ -131,8 +133,8 @@ if __name__ == '__main__':
 
             predict(model, file_names, args.batch_size, output_path, problem_type=args.problem_type)
     else:
-        _, file_names = get_split(args.fold)
-        model = get_model(str(Path(args.model_path).joinpath('model_{fold}.pt'.format(fold=args.fold))),
+        _, file_names = get_split(args.fold, train_path=Path(args.train_files_dir))
+        model = get_model(str((Path(args.model_path)/ ('fold_%i'%args.fold)).joinpath('model_{fold}.pt'.format(fold=args.fold))),
                           model_type=args.model_type, problem_type=args.problem_type)
 
         print('num file_names = {}'.format(len(file_names)))
