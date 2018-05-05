@@ -23,6 +23,11 @@ import matplotlib
 import matplotlib.pyplot as plt
 import argparse
 
+# Root directory of the project
+ROOT_DIR = os.path.abspath("../../")
+
+# Import Mask RCNN
+sys.path.append(ROOT_DIR)
  # To find local version of the library
 import os
 #os.chdir("Mask_RCNN")
