@@ -114,7 +114,7 @@ robot-surgery-segmentation/pytorch_mask_rcnn_2/temp_results/
 
 # Data files and directories common in repo root
 datasets/
-logs/
+Mask_RCNN_1/logs/
 *.h5
 results/
 temp/

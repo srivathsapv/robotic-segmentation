@@ -17,6 +17,8 @@ import colorsys
 import numpy as np
 from skimage.measure import find_contours
 import matplotlib.pyplot as plt
+if "DISPLAY" not in os.environ:
+    plt.switch_backend('agg')
 from matplotlib import patches,  lines
 from matplotlib.patches import Polygon
 import IPython.display

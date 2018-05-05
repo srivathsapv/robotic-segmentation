@@ -279,7 +279,8 @@ class RoboDataset(utils.Dataset):
 from pycocotools.coco import COCO
 dataset_train = RoboDataset()
 # TODO parameterize this
-dataset_dir = "/Users/vishalrao/PycharmProjects/DeepLearning/robot-surgery-segmentation/data/annotations/binary_folds/fold_0"
+# dataset_dir = "/Users/vishalrao/PycharmProjects/DeepLearning/robot-surgery-segmentation/data/annotations/binary_folds/fold_0"
+dataset_dir = "/home/vishalrao/robotic-segmentation/data/annotations/binary_folds/fold_0"
 dataset_train.load_robo(dataset_dir, "train")
 dataset_train.prepare()
 
