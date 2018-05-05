@@ -5,7 +5,9 @@ import numpy as np
 from tqdm import tqdm
 
 from prepare_data import height, width, h_start, w_start
-
+from validation import calculate_confusion_matrix_from_arrays
+from tensorboardX import SummaryWriter
+import os
 
 def general_dice(y_true, y_pred):
     result = []
@@ -83,6 +85,9 @@ if __name__ == '__main__':
 
     elif args.problem_type == 'parts':
         #for instrument_id in tqdm([1, 3]):
+        num_classes = 4
+        confusion_matrix = np.zeros((num_classes, num_classes), dtype=np.uint32)
+
         for instrument_id in tqdm(range(1, 9)):
             for file_name in (
                             Path(args.train_path) / ('instrument_dataset_' + str(instrument_id)) / 'parts_masks').glob(
@@ -96,6 +101,12 @@ if __name__ == '__main__':
 
                 result_dice += [general_dice(y_true, y_pred)]
                 result_jaccard += [general_jaccard(y_true, y_pred)]
+                confusion_matrix += calculate_confusion_matrix_from_arrays(
+                    y_pred, y_true, num_classes)
+
+        tensorboard_log_dir = os.path.join(args.target_path, "tensorboard_logs")
+        tensorboard_writer = SummaryWriter(log_dir=tensorboard_log_dir)
+        tensorboard_writer.add_image("Confusion Matrix", confusion_matrix)
 
     elif args.problem_type == 'instruments':
         #for instrument_id in tqdm([1, 3]):

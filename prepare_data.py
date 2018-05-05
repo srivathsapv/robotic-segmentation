@@ -13,7 +13,7 @@ data_path = Path('data')
 
 train_path = data_path / 'train'
 
-cropped_train_path = data_path / 'cropped_train'
+cropped_train_path = data_path / 'cropped_train_includingOthersInBinary'
 
 original_height, original_width = 1080, 1920
 height, width = 1024, 1280
@@ -40,6 +40,7 @@ def read_im(file_name, is_mask=False):
 
 if __name__ == '__main__':
     for instrument_index in range(1, 9):
+
         instrument_folder = 'instrument_dataset_' + str(instrument_index)
 
         (cropped_train_path / instrument_folder / 'images').mkdir(exist_ok=True, parents=True)
@@ -88,8 +89,8 @@ if __name__ == '__main__':
                 elif 'Other' in str(mask_folder):
                     mask_instruments[mask > 0] = 7
 
+                mask_binary += mask # VR: NOTE: this has been moved outside the below mentioned 'if other' condition
                 if 'Other' not in str(mask_folder):
-                    mask_binary += mask
 
                     mask_parts[mask == 10] = 1  # Shaft
                     mask_parts[mask == 20] = 2  # Wrist
@@ -103,7 +104,7 @@ if __name__ == '__main__':
                 np.uint8) * parts_factor
             mask_instruments = (mask_instruments[h_start: h_start + height, w_start: w_start + width]).astype(
                 np.uint8) * instrument_factor
-
+            """
             cv2.imshow("mask_binary",mask_binary); cv2.waitKey(0)
             cv2.imshow("mask_parts", mask_parts); cv2.waitKey(0)
             cv2.imshow("mask_instruments", mask_instruments); cv2.waitKey(0)
@@ -111,7 +112,7 @@ if __name__ == '__main__':
             cv2.imwrite(str(binary_mask_folder / file_name.name), mask_binary)
             cv2.imwrite(str(parts_mask_folder / file_name.name), mask_parts)
             cv2.imwrite(str(instrument_mask_folder / file_name.name), mask_instruments)
-"""
+
 def get_factor_mask_labels(problem_type):
     if problem_type == 'binary':
         mask_folder = 'binary_masks'

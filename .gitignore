@@ -111,3 +111,4 @@ ENV/
 /images
 /pytorch_mask_rcnn_old
 robot-surgery-segmentation/pytorch_mask_rcnn_2/temp_results/
+*.h5
