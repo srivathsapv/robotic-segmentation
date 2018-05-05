@@ -78,8 +78,8 @@ class RoboSurgeryConfig(Config):
     VALIDATION_STEPS = 5
 
     def __init__(self, num_nonBG_cat):
-        super(RoboSurgeryConfig, self).__init__()
         self.NUM_CLASSES = 1 + num_nonBG_cat  # background + 3 shapes
+        super(RoboSurgeryConfig, self).__init__()
 
 # ## Notebook Preferences
 
@@ -258,6 +258,9 @@ class InferenceConfig(RoboSurgeryConfig):
     GPU_COUNT = 1
     IMAGES_PER_GPU = 1
 
+    def __init__(self, num_nonBG_cat):
+        super(RoboSurgeryConfig, self).__init__(num_nonBG_cat)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     arg = parser.add_argument
@@ -270,13 +273,6 @@ if __name__ == '__main__':
     arg('--problem_type', type=str, default='binary', choices=['binary', 'parts', 'instruments'])
     arg('--init_with', type=str, default='coco', choices=['coco', 'imagenet', 'last'])
     args = parser.parse_args()
-
-    # Root directory of the project
-    # TODO Modify this
-    ROOT_DIR = os.path.abspath("../../")
-
-    # Import Mask RCNN
-    sys.path.append(ROOT_DIR)
 
     # Directory to save logs and trained model
     MODEL_DIR = os.path.join(ROOT_DIR, "logs")
